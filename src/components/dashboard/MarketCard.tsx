@@ -4,50 +4,50 @@ import { Market } from '../../services/polymarket/gamma';
 interface MarketCardProps {
   market: Market;
   isSelected: boolean;
+  isActive?: boolean;
   onSelect: (market: Market) => void;
 }
 
-export const MarketCard: React.FC<MarketCardProps> = ({ market, isSelected, onSelect }) => {
+export const MarketCard: React.FC<MarketCardProps> = ({ market, isSelected, isActive = false, onSelect }) => {
   const formatVolume = (vol: number) => {
     if (vol >= 1_000_000) return `$${(vol / 1_000_000).toFixed(1)}M`;
     if (vol >= 1_000) return `$${(vol / 1_000).toFixed(1)}K`;
     return `$${vol.toFixed(0)}`;
   };
 
+  const cardClass = [
+    'market-card',
+    isSelected ? 'market-card--selected' : '',
+    isActive ? 'market-card--active' : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div 
-      className={`glass fade-in ${isSelected ? 'selected' : ''}`} 
-      onClick={() => onSelect(market)}
-      style={{ 
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        border: isSelected ? '2px solid var(--accent-color)' : '1px solid var(--glass-border)',
-        padding: '1rem'
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <span style={{ fontSize: '0.7rem', color: 'var(--accent-color)', fontWeight: 'bold' }}>
-          {market.negRisk ? 'NEG RISK' : 'STANDARD'}
+    <div className={cardClass} onClick={() => onSelect(market)}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.45rem' }}>
+        <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.06em', color: isActive ? 'var(--green)' : 'var(--accent)', textTransform: 'uppercase' }}>
+          {isActive ? '⬤ scanning' : market.negRisk ? 'neg risk' : 'standard'}
         </span>
-        <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>
-          Vol: {formatVolume(market.volume)}
+        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
+          {formatVolume(market.volume)}
         </span>
       </div>
-      <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: 'white' }}>
+      <p style={{ margin: '0 0 0.6rem', fontSize: '0.8rem', fontWeight: 500, color: 'var(--text)', lineHeight: 1.4 }}>
         {market.question}
-      </h4>
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      </p>
+      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
         {market.outcomes.map((outcome, i) => {
           const price = parseFloat(market.outcomePrices[i] || '0');
+          const isYes = outcome.toLowerCase() === 'yes';
           return (
-            <div key={i} style={{ 
-              fontSize: '0.75rem', 
-              background: 'rgba(255,255,255,0.05)', 
-              padding: '2px 8px', 
-              borderRadius: '4px' 
+            <span key={i} style={{
+              fontSize: '0.7rem', fontWeight: 600,
+              padding: '0.15rem 0.55rem', borderRadius: '4px',
+              background: isYes ? 'var(--green-dim)' : 'rgba(255,255,255,0.05)',
+              color: isYes ? 'var(--green)' : 'var(--text-muted)',
+              border: `1px solid ${isYes ? 'rgba(104,211,145,0.15)' : 'transparent'}`,
             }}>
-              {outcome}: {(price * 100).toFixed(0)}%
-            </div>
+              {outcome} {(price * 100).toFixed(0)}%
+            </span>
           );
         })}
       </div>

@@ -1,81 +1,118 @@
-# 🤖 Polymarket AI Trading Agent
+# Polymarket AI Trading Agent
 
-A premium, high-intelligence trading agent for Polymarket that leverages **Gemini 1.5 Flash** for strategic reasoning and the **Polymarket CLOB API** for execution. Built with a "no-bloat" philosophy, this agent provides "Straight Reasoning" logs for every trade, giving you full visibility into its decision-making process.
-
-![Architecture Overview](https://img.shields.io/badge/Architecture-Vite_5_%2B_React_%2B_TS-646CFF?style=for-the-badge&logo=vite)
-![AI-Powered](https://img.shields.io/badge/Brain-Gemini_1.5_Flash-4285F4?style=for-the-badge&logo=google-gemini)
-![On-Chain](https://img.shields.io/badge/Exchange-Polymarket_CLOB-8247E5?style=for-the-badge&logo=polygon)
+An autonomous prediction market trading agent for [Polymarket](https://polymarket.com) powered by Google Gemini. The agent discovers markets, analyzes them using a configurable AI directive, and executes trades — all gasless via Polymarket's order relayer.
 
 ---
 
-## ✨ Features
+## Features
 
-### 🧠 **Straight Reasoning Engine**
-The agent thinking is transparent. For every market analysis, you'll see a multi-step rationale in the **Brain Feed** terminal, including:
-- **Decision Logic**: Why it chose BUY, SELL, or HOLD.
-- **Confidence Scoring**: 1-100% conviction level.
-- **Sentiment Analysis**: Evaluation of current market sentiment vs. prices.
+### Autonomous Trading
+- Fetches live markets from the Gamma API, sorted by volume
+- Auto-rotates through all active markets each cycle, or targets a single market manually
+- Executes BUY/SELL orders via the Polymarket CLOB — no gas fees (signed off-chain, relayed by Polymarket)
+- Stops automatically when the cumulative spend limit is reached
 
-### 🎛️ **Dynamic Tuning Interface**
-Fine-tune the agent's behavior in real-time without restarting:
-- **Aggressiveness Slider**: Controls trade sizes and confidence thresholds.
-- **Risk Tolerance**: Set to Low, Medium, or High to filter market opportunities.
-- **Scan Interval**: Adjust how often the agent re-evaluates the market.
+### AI Reasoning
+- Powered by Google Gemini (model selectable at runtime)
+- Free-text **Agent Directive** — write any instruction: focus area, confidence thresholds, strategy, risk posture
+- Full reasoning trace visible in the live feed for every decision
 
-### 🚨 **Emergency Overrides**
-- **Global Panic Button**: Instantly stops the agent and cancels all pending orders on the CLOB.
-- **Demo Mode**: Test strategies safely on a "Dry Run" mode where trades are logged but not executed on-chain.
+### Balance & Portfolio Tracking
+- Live USDC balance fetched from Polygon (USDC.e) for live accounts
+- Demo mode with configurable starting balance (default $1,000)
+- Session P&L shown in real time
+- Transaction history with **Expected Return**, **Max Loss**, and **EV** per trade
+- Aggregate EV across the session
 
-### 🛡️ **Security First**
-- **In-Memory Credentials**: API Keys and Private Keys are stored only in your browser's session memory.
-- **No Persistence**: Nothing sensitive is ever written to disk or `.env` files.
+### Risk Controls
+- **Max Trade Budget** — caps total cumulative spend; agent stops when the limit is hit
+- **Aggressiveness** slider — controls trade size and confidence threshold
+- **Risk Tolerance** — Low / Medium / High filters
+- **Panic button** — stops agent and cancels all open CLOB orders instantly
+- **Reset Experiment** — restores demo balance, clears trade history and reasoning log
 
----
-
-## 🚀 Getting Started
-
-### **Prerequisites**
-- **Node.js**: v18.14+ (v20+ recommended)
-- **API Keys**:
-  - Google Gemini API Key (from [Google AI Studio](https://aistudio.google.com/))
-  - Polygon Private Key (Burner wallet recommended)
-
-### **Installation**
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/ajokhai/polymarket-bot.git
-   cd polymarket-bot
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Launch the Dashboard**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Onboarding**: Open the URL (default `http://localhost:5173`) and follow the onboarding wizard to input your keys.
+### Demo Mode
+- All decisions logged but no real orders placed
+- Configurable starting balance for backtesting strategies
+- Full EV/expectancy tracking identical to live mode
 
 ---
 
-## 📂 Project Structure
+## Prerequisites
 
-- `src/services/ai`: Gemini reasoning engine and prompt templates.
-- `src/services/polymarket`: Gamma API (Discovery) and CLOB (Execution) clients.
-- `src/components`: Premium UI components (Onboarding, Dashboard, Brain Feed).
-- `src/utils`: EIP-712 signing and crypto utilities.
-
----
-
-## ⚠️ Disclaimer
-
-Prediction markets involve significant risk. This agent is a tool for professional research and automated execution; it is not financial advice. **Always start with a burner wallet and use Small trade sizes in Demo Mode before going live.**
+| Requirement | Notes |
+|---|---|
+| Node.js v18+ | v20+ recommended |
+| Google Gemini API key | [Google AI Studio](https://aistudio.google.com/) — free tier works for Gemini 2.5 Flash |
+| Polygon private key | Burner wallet strongly recommended for live trading |
 
 ---
 
-## ⚖️ License
+## Getting Started
 
-MIT License - see [LICENSE](LICENSE) for details.
+```bash
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` and complete the one-time setup wizard. Credentials are saved to `localStorage` so you won't need to re-enter them on refresh.
+
+---
+
+## AI Models
+
+Select the model in the Tuning panel at runtime. No restart needed.
+
+| Model ID | Notes |
+|---|---|
+| `gemini-3.1-pro-preview` | Most capable; paid tier only |
+| `gemini-3-flash-preview` | Fast with strong reasoning |
+| `gemini-3.1-flash-lite-preview` | Budget preview option |
+| `gemini-2.5-pro` | Stable, highly capable |
+| `gemini-2.5-flash` | **Default** — best speed/quality balance |
+| `gemini-2.5-flash-lite` | Cheapest stable option |
+
+> Preview models (`-preview`) may be deprecated without notice. Check [Google AI model docs](https://ai.google.dev/gemini-api/docs/models) for the current list.
+
+---
+
+## Project Structure
+
+```
+src/
+├── services/
+│   ├── polymarket/
+│   │   ├── gamma.ts       # Market discovery (Gamma API)
+│   │   ├── clob.ts        # Order execution (CLOB API, cached auth)
+│   │   └── portfolio.ts   # Balance, transactions, EV calculations
+│   └── ai/
+│       └── reasoning.ts   # Gemini prompt + response validation
+├── components/
+│   ├── dashboard/
+│   │   ├── MarketCard.tsx
+│   │   ├── BrainFeed.tsx
+│   │   ├── BalanceWidget.tsx
+│   │   ├── TuningPanel.tsx
+│   │   └── TransactionHistory.tsx
+│   └── onboarding/
+│       └── OnboardingWizard.tsx
+└── App.tsx
+```
+
+---
+
+## How EV Is Calculated
+
+For each trade the agent takes:
+
+- **Expected Return** — profit if the trade resolves correctly (`size × (1 − price)` for BUY)
+- **Max Loss** — cost if wrong (`size × price` for BUY)
+- **EV** — `(confidence% × expectedReturn) − ((1 − confidence%) × maxLoss)`
+
+A positive EV means the AI believes the bet is mathematically sound given its confidence estimate.
+
+---
+
+## Disclaimer
+
+Prediction markets carry significant financial risk. This tool is for research and automation purposes only — not financial advice. Always start in Demo mode. Use a dedicated burner wallet with limited funds for live trading.

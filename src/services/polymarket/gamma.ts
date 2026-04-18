@@ -1,11 +1,3 @@
-/**
- * Polymarket Gamma API Client for Market Discovery
- * Documentation: https://gamma-api.polymarket.com
- * 
- * IMPORTANT: The Gamma API returns `outcomes`, `outcomePrices`, and `clobTokenIds`
- * as JSON-encoded strings, not native arrays. We parse them during fetch.
- */
-
 // In dev, requests go through the Vite proxy (/gamma-api → gamma-api.polymarket.com)
 // to avoid CORS. In production, replace with a real backend proxy or serverless function.
 const GAMMA_API_URL = import.meta.env.DEV
@@ -26,29 +18,17 @@ export interface Market {
   endDate: string;
   negRisk: boolean;
   orderPriceMinTickSize: number;
-  // Derived fields
   groupTitle: string;
 }
 
-/**
- * Safely parse a JSON-encoded string field from the Gamma API.
- * Returns an empty array if parsing fails.
- */
 const safeParseArray = (raw: unknown): string[] => {
-  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw)) return raw as string[];
   if (typeof raw === 'string') {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(raw); } catch { return []; }
   }
   return [];
 };
 
-/**
- * Transform a raw Gamma API market object into our typed Market interface.
- */
 const transformMarket = (raw: any): Market => ({
   id: raw.id ?? '',
   question: raw.question ?? '',
@@ -66,59 +46,28 @@ const transformMarket = (raw: any): Market => ({
   groupTitle: raw.groupItemTitle ?? raw.question ?? '',
 });
 
+const fetchAndTransform = async (params: Record<string, string>): Promise<Market[]> => {
+  const query = new URLSearchParams(params);
+  const response = await fetch(`${GAMMA_API_URL}/markets?${query}`);
+  if (!response.ok) throw new Error(`Gamma API ${response.status}: ${response.statusText}`);
+  const data = await response.json();
+  if (!Array.isArray(data)) return [];
+  return data.map(transformMarket);
+};
+
 export const fetchMarkets = async (params: {
   active?: boolean;
   limit?: number;
   offset?: number;
 }): Promise<Market[]> => {
-  const query = new URLSearchParams({
-    active: params.active !== undefined ? String(params.active) : 'true',
-    limit: String(params.limit || 20),
-    offset: String(params.offset || 0),
-  });
-
   try {
-    const response = await fetch(`${GAMMA_API_URL}/markets?${query.toString()}`);
-    if (!response.ok) throw new Error(`Gamma API ${response.status}: ${response.statusText}`);
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-      console.warn('Gamma API returned non-array response:', data);
-      return [];
-    }
-
-    return data.map(transformMarket);
+    return await fetchAndTransform({
+      active: String(params.active ?? true),
+      limit: String(params.limit ?? 20),
+      offset: String(params.offset ?? 0),
+    });
   } catch (error) {
     console.error('Gamma API Error:', error);
-    return [];
-  }
-};
-
-/**
- * Search markets by keyword. Uses the Gamma API filter endpoint.
- */
-export const searchMarkets = async (keyword: string, limit = 20): Promise<Market[]> => {
-  try {
-    const query = new URLSearchParams({
-      active: 'true',
-      closed: 'false',
-      limit: String(limit),
-    });
-    const response = await fetch(`${GAMMA_API_URL}/markets?${query.toString()}`);
-    if (!response.ok) throw new Error(`Gamma API ${response.status}`);
-    const data = await response.json();
-
-    if (!Array.isArray(data)) return [];
-
-    // Client-side filtering since the Gamma API doesn't have a text search param
-    return data
-      .filter((m: any) =>
-        m.question?.toLowerCase().includes(keyword.toLowerCase()) ||
-        m.description?.toLowerCase().includes(keyword.toLowerCase())
-      )
-      .map(transformMarket);
-  } catch (error) {
-    console.error('Gamma Search Error:', error);
     return [];
   }
 };
