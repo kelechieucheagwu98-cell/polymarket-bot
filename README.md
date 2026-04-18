@@ -1,4 +1,4 @@
-# Polymarket AI Trading Agent
+# Polymarket AI Trading Agent `v1.1.0`
 
 An autonomous prediction market trading agent for [Polymarket](https://polymarket.com) powered by Google Gemini. The agent discovers markets, analyzes them using a configurable AI directive, and executes trades — all gasless via Polymarket's order relayer.
 
@@ -13,7 +13,7 @@ An autonomous prediction market trading agent for [Polymarket](https://polymarke
 - Stops automatically when the cumulative spend limit is reached
 
 ### AI Reasoning
-- Powered by Google Gemini (model selectable at runtime)
+- **Multi-Provider Support**: Choose between Google Gemini, Anthropic Claude, OpenAI, Grok (xAI), or OpenRouter.
 - Free-text **Agent Directive** — write any instruction: focus area, confidence thresholds, strategy, risk posture
 - Full reasoning trace visible in the live feed for every decision
 
@@ -43,7 +43,7 @@ An autonomous prediction market trading agent for [Polymarket](https://polymarke
 | Requirement | Notes |
 |---|---|
 | Node.js v18+ | v20+ recommended |
-| Google Gemini API key | [Google AI Studio](https://aistudio.google.com/) — free tier works for Gemini 2.5 Flash |
+| AI API Keys | Gemini (Required), OpenAI, Anthropic, xAI, OpenRouter (Optional) |
 | Polygon private key | Burner wallet strongly recommended for live trading |
 
 ---
@@ -61,18 +61,17 @@ Open `http://localhost:5173` and complete the one-time setup wizard. Credentials
 
 ## AI Models
 
-Select the model in the Tuning panel at runtime. No restart needed.
+The agent supports the following flagship models (selectable at runtime):
 
-| Model ID | Notes |
+| Provider | Notable Models |
 |---|---|
-| `gemini-3.1-pro-preview` | Most capable; paid tier only |
-| `gemini-3-flash-preview` | Fast with strong reasoning |
-| `gemini-3.1-flash-lite-preview` | Budget preview option |
-| `gemini-2.5-pro` | Stable, highly capable |
-| `gemini-2.5-flash` | **Default** — best speed/quality balance |
-| `gemini-2.5-flash-lite` | Cheapest stable option |
+| **Google** | `gemini-3.1-pro-preview`, `gemini-3-flash-preview` |
+| **Anthropic** | `claude-3-5-sonnet-latest`, `claude-3-5-haiku-latest` |
+| **OpenAI** | `gpt-4o`, `o1-preview`, `o3-mini` |
+| **Grok (xAI)** | `grok-2-1212`, `grok-2-mini` |
+| **OpenRouter** | Any model via `provider/model` (e.g., `meta-llama/llama-3.1-405b`) |
 
-> Preview models (`-preview`) may be deprecated without notice. Check [Google AI model docs](https://ai.google.dev/gemini-api/docs/models) for the current list.
+> **Note:** Only Gemini is required. Adding other keys in the setup wizard enables those specific models.
 
 ---
 
