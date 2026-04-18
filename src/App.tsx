@@ -18,6 +18,10 @@ const DEMO_STARTING_BALANCE = 1000;
 interface Credentials {
   geminiKey: string;
   privateKey: string;
+  claudeKey?: string;
+  xaiKey?: string;
+  openAiKey?: string;
+  openRouterKey?: string;
 }
 
 const loadSavedCreds = (): Credentials | null => {
@@ -35,7 +39,7 @@ function App() {
     interval: 30,
     autoRotate: true,
     maxBudget: 0,
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.1-pro-preview',
     directive: '',
   });
   const [markets, setMarkets] = useState<Market[]>([]);
@@ -171,6 +175,10 @@ function App() {
         riskTolerance: t.riskTolerance,
         directive: t.directive,
         model: t.model,
+        claudeKey: c.claudeKey,
+        xaiKey: c.xaiKey,
+        openAiKey: c.openAiKey,
+        openRouterKey: c.openRouterKey,
       });
 
       addLog('brain', `[${result.decision}] ${result.rationale} (${result.confidence}% confidence)`);

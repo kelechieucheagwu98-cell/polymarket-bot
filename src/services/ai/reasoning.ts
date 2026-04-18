@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// No SDK imports needed; native fetch handles all API providers.
 
 export interface ReasoningContext {
   marketTitle: string;
@@ -9,6 +9,10 @@ export interface ReasoningContext {
   riskTolerance: 'low' | 'medium' | 'high';
   directive: string;
   model?: string;
+  claudeKey?: string;
+  xaiKey?: string;
+  openAiKey?: string;
+  openRouterKey?: string;
 }
 
 export interface ReasoningResult {
@@ -40,16 +44,7 @@ const validateResult = (parsed: any): ReasoningResult => {
   };
 };
 
-export const analyzeMarket = async (
-  apiKey: string,
-  context: ReasoningContext
-): Promise<ReasoningResult> => {
-  if (!apiKey) return { ...FALLBACK, rationale: 'No Gemini API key provided.' };
-
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: context.model ?? 'gemini-2.5-flash' });
-
-  const prompt = `You are an autonomous prediction market trading agent operating on Polymarket.
+const buildPrompt = (context: ReasoningContext) => `You are an autonomous prediction market trading agent operating on Polymarket.
 
 AGENT DIRECTIVE (follow this above all else):
 ${context.directive || 'Find the highest-confidence edge and act on it. Prioritize liquidity and near-term resolution.'}
@@ -78,12 +73,103 @@ Return ONLY valid JSON, no markdown:
   "size_factor": <0.1-1.0>
 }`;
 
+const extractJSON = (text: string) => {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('AI response had no JSON.');
+  return JSON.parse(match[0]);
+};
+
+// --- Provider Fetchers ---
+
+const fetchGemini = async (apiKey: string, context: ReasoningContext, prompt: string) => {
+  if (!apiKey) throw new Error('No Gemini API key provided.');
+  const modelId = context.model ?? 'gemini-3.1-pro-preview';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }]
+    })
+  });
+  
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Google API error: ${response.status} - ${errText}`);
+  }
+  
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+};
+
+const fetchAnthropic = async (apiKey: string, context: ReasoningContext, prompt: string) => {
+  if (!apiKey) throw new Error('No Anthropic API key provided.');
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true' // Required for web apps
+    },
+    body: JSON.stringify({
+      model: context.model,
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!response.ok) throw new Error(`Anthropic API error: ${response.statusText}`);
+  const data = await response.json();
+  return data.content[0].text;
+};
+
+const fetchOpenAIFormat = async (endpoint: string, apiKey: string, context: ReasoningContext, prompt: string) => {
+  if (!apiKey) throw new Error(`No API key provided for ${endpoint}.`);
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: context.model,
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+  const data = await response.json();
+  return data.choices[0].message.content;
+};
+
+// --- Main Router ---
+
+export const analyzeMarket = async (
+  apiKey: string, // Kept for backwards compatibility, used as geminiKey
+  context: ReasoningContext
+): Promise<ReasoningResult> => {
+  const prompt = buildPrompt(context);
+  const modelId = context.model || 'gemini-3.1-pro-preview';
+
   try {
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return { ...FALLBACK, rationale: 'AI response had no JSON.' };
-    return validateResult(JSON.parse(match[0]));
+    let responseText = '';
+
+    if (modelId.startsWith('gemini')) {
+      responseText = await fetchGemini(apiKey, context, prompt);
+    } else if (modelId.startsWith('claude')) {
+      responseText = await fetchAnthropic(context.claudeKey || '', context, prompt);
+    } else if (modelId.startsWith('grok')) {
+      responseText = await fetchOpenAIFormat('https://api.x.ai/v1/chat/completions', context.xaiKey || '', context, prompt);
+    } else if (modelId.startsWith('gpt') || modelId.startsWith('o1') || modelId.startsWith('o3')) {
+      responseText = await fetchOpenAIFormat('https://api.openai.com/v1/chat/completions', context.openAiKey || '', context, prompt);
+    } else if (modelId.includes('/')) {
+      // OpenRouter format: provider/model
+      responseText = await fetchOpenAIFormat('https://openrouter.ai/api/v1/chat/completions', context.openRouterKey || '', context, prompt);
+    } else {
+      throw new Error(`Unsupported model identifier: ${modelId}`);
+    }
+
+    return validateResult(extractJSON(responseText));
   } catch (error) {
     return { ...FALLBACK, rationale: `Analysis error: ${(error as Error).message}` };
   }

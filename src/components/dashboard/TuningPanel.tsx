@@ -10,14 +10,48 @@ export interface TuningParams {
   directive: string;
 }
 
-export const GEMINI_MODELS = [
-  { id: 'gemini-3.1-pro-preview',        label: 'Gemini 3.1 Pro (preview) — Most capable' },
-  { id: 'gemini-3-flash-preview',        label: 'Gemini 3 Flash (preview) — Fast + reasoning' },
-  { id: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite (preview) — Budget' },
-  { id: 'gemini-2.5-pro',                label: 'Gemini 2.5 Pro — Stable' },
-  { id: 'gemini-2.5-flash',              label: 'Gemini 2.5 Flash — Stable, fast' },
-  { id: 'gemini-2.5-flash-lite',         label: 'Gemini 2.5 Flash Lite — Stable, cheapest' },
-] as const;
+export const AI_MODELS = [
+  {
+    group: 'Gemini 3.x (Google)',
+    models: [
+      { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro — Smartest, deep reasoning' },
+      { id: 'gemini-3-deep-think-preview', label: 'Gemini 3 Deep Think — Maximum logic' },
+      { id: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash Lite — Fast & cheap' },
+      { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash — Balanced' }
+    ]
+  },
+  {
+    group: 'Claude 3.5 (Anthropic)',
+    models: [
+      { id: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet — Elite coding/logic' },
+      { id: 'claude-3-5-haiku-latest', label: 'Claude 3.5 Haiku — Fast & capable' }
+    ]
+  },
+  {
+    group: 'Grok (xAI)',
+    models: [
+      { id: 'grok-2-1212', label: 'Grok 2 — Unfiltered logic' },
+      { id: 'grok-2-mini', label: 'Grok 2 Mini — Fast' }
+    ]
+  },
+  {
+    group: 'OpenAI',
+    models: [
+      { id: 'o1-preview', label: 'o1 Preview — Deep reasoning' },
+      { id: 'o3-mini', label: 'o3 Mini — Fast reasoning' },
+      { id: 'gpt-4o', label: 'GPT-4o — Flagship' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o Mini — Small' }
+    ]
+  },
+  {
+    group: 'OpenRouter / Others',
+    models: [
+      { id: 'anthropic/claude-3.5-sonnet', label: 'OR: Claude 3.5 Sonnet' },
+      { id: 'google/gemini-3-pro', label: 'OR: Gemini 3 Pro' },
+      { id: 'openai/o1-pro', label: 'OR: o1 Pro' }
+    ]
+  }
+];
 
 interface TuningPanelProps {
   params: TuningParams;
@@ -165,8 +199,15 @@ export const TuningPanel: React.FC<TuningPanelProps> = ({ params, onChange, bala
       <div className="tuning-row">
         <label>AI Model</label>
         <select value={params.model} onChange={e => onChange({ ...params, model: e.target.value })}>
-          {GEMINI_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          {AI_MODELS.map(g => (
+            <optgroup key={g.group} label={g.group}>
+              {g.models.map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </optgroup>
+          ))}
         </select>
+        <p className="hint">Make sure you have added the required API keys in setup for non-Gemini models.</p>
       </div>
 
       <ConfirmedInput
